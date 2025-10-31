@@ -1,0 +1,50 @@
+name: Deploy to GitHub Pages
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Create version directory
+        run: |
+          mkdir -p ./v${{ github.event.release.tag_name }}
+          cp -r ./* ./v${{ github.event.release.tag_name }}/
+          # Удаляем файлы, которые не должны копироваться
+          rm -rf ./v${{ github.event.release.tag_name }}/.github
+          rm -rf ./v${{ github.event.release.tag_name }}/v*
+          
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
